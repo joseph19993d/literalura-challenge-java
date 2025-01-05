@@ -2,7 +2,10 @@ package com.example.booksLiterature;
 import java.util.Optional;
 import java.util.Scanner;
 
+import com.example.booksLiterature.dto.BookDTO;
+import com.example.booksLiterature.dto.BookData;
 import com.example.booksLiterature.repository.BookRepository;
+import com.example.booksLiterature.services.DataTransformer;
 import com.example.booksLiterature.services.GetAPI;
 import com.example.booksLiterature.utils.Validator;
 import org.springframework.stereotype.Repository;
@@ -12,6 +15,9 @@ public class Inicial {
 
     private BookRepository repository;
     private final String API_URL= "https://gutendex.com/books/";
+    DataTransformer dataTransformer = new DataTransformer();
+
+
     public Inicial(BookRepository repository) {
         this.repository = repository;
     }
@@ -83,19 +89,13 @@ public class Inicial {
         System.out.println("logica de busqueda de libro");
 
         var json= GetAPI.obtenerJson(API_URL+ "?search="+nombreDelLibro.replace(" ","+"));
-        System.out.println(json);
-//       var convierteBusqueda= convierteDatos.obtenerDatos(json,LibroDTO.class);
-//        Optional<DatosLibro> libroBuscado = convierteBusqueda.libros().stream()
-//                .filter(t-> t.titulo().toUpperCase().contains(nombreDelLibro.toUpperCase()))
-//                .findFirst();
-//        if (libroBuscado.isPresent()){
-////            Libro libro = new Libro(libroBuscado.get());
-////            repository.save(libro);
-////            System.out.println(libro.toString());
-//
-//        }else {
-//            System.out.println("No se encontro el libro");
-//        }
+
+        System.out.println("JSON de busqueda : \n "+json);
+
+      var objectDataFromApiResponst = dataTransformer.getData(json, BookDTO.class);
+        System.out.println("JSON from tranformer to JSON"+objectDataFromApiResponst);
+
+
     }
 
 }
