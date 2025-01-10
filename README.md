@@ -29,5 +29,16 @@ Desarrollar un sistema que ofrezca **cinco opciones principales de interacción*
 4️⃣  Listar autores vivos en un determinado año  
 5️⃣  Listar libros por idioma  
 0️⃣  Salir  
+```
 
+---
 
+## 🔧 Tecnologías Utilizadas
+
+```plaintext
+Java 17 ☕
+Spring Framework 🌱
+Gutendex API 📚
+JSON 🔗
+Base de Datos Relacional 💾
+```
