@@ -1,28 +1,27 @@
 package com.example.booksLiterature;
+import java.util.List;
 import java.util.Optional;
 import java.util.Scanner;
 
 import com.example.booksLiterature.dto.BookDTO;
 import com.example.booksLiterature.dto.BookData;
+import com.example.booksLiterature.model.Author;
+import com.example.booksLiterature.model.Book;
 import com.example.booksLiterature.repository.BookRepository;
 import com.example.booksLiterature.services.DataTransformer;
 import com.example.booksLiterature.services.GetAPI;
 import com.example.booksLiterature.utils.Validator;
-import org.springframework.stereotype.Repository;
+import org.springframework.dao.DataIntegrityViolationException;
 
 
 public class Inicial {
 
-    private BookRepository repository;
+    private BookRepository bookRepository;
     private final String API_URL= "https://gutendex.com/books/";
     DataTransformer dataTransformer = new DataTransformer();
-
-
-    public Inicial(BookRepository repository) {
-        this.repository = repository;
-    }
-
-    private Scanner leerConsola = new Scanner(System.in);
+    private Scanner readConsole = new Scanner(System.in);
+    private List<Book> books;
+    private List<Author> authors;
 
     public String menu=
             """
@@ -44,33 +43,41 @@ public class Inicial {
              pt- Portugues
             """;
 
+    public Inicial(BookRepository repository) {
+        this.bookRepository = repository;
+    }
+
+
    public void desplegarOpciones (){
        System.out.println(menu);
-       String opcion = leerConsola.nextLine();
+       String opcion = readConsole.nextLine();
       if(Validator.isNumeric(opcion)) {
-           System.out.println("bien echo ");
            switch ( Integer.parseInt(opcion)) {
                case 1:
+                   do{
                    System.out.print("Ingrese el título o palabras clave: ");
-                   String title = leerConsola.nextLine();
-                   //bookService.searchBookByTitle(title);
+                   String title = readConsole.nextLine();
                    buscarLibro(title);
+                   System.out.println("¿Desea buscar otro libro? ");
+                   }while (Validator.question("s","n"));
                    break;
                case 2:
-                   //bookService.listAllBooks();
+                   showAllBooks();
                    break;
                case 3:
-                   //bookService.listAllAuthors();
+                   showAuthors();
                    break;
                case 4:
                    System.out.print("Ingrese el año de interés: ");
-                   int year = Integer.parseInt(leerConsola.nextLine());
-                   //bookService.listAuthorsByYear(year);
+                   int year = Integer.parseInt(readConsole.nextLine());
+                   listAuthorsByYear(year);
                    break;
                case 5:
                    System.out.print("Ingrese el código de idioma (ej. en, fr): ");
-                   String language = leerConsola.nextLine();
+                   System.out.println(languageMenu);
+                   String language = readConsole.nextLine();
                    //bookService.listBooksByLanguage(language);
+                   showBooksByIdiom(language);
                    break;
                case 0:
                    System.out.println("Saliendo del programa...");
@@ -78,24 +85,89 @@ public class Inicial {
                default:
                    System.out.println("Opción inválida. Intente nuevamente.");
            }
-      }else {
+      } else {
           System.out.println("Ingrese un numero ");
           desplegarOpciones();
       }
+       if (Validator.isNumeric(opcion) && Integer.parseInt(opcion) != 0) {
+           desplegarOpciones();
+       }
 
    }
 
-    private void buscarLibro(String nombreDelLibro) {
-        System.out.println("logica de busqueda de libro");
-
-        var json= GetAPI.obtenerJson(API_URL+ "?search="+nombreDelLibro.replace(" ","+"));
-
-        System.out.println("JSON de busqueda : \n "+json);
-
-      var objectDataFromApiResponst = dataTransformer.getData(json, BookDTO.class);
-        System.out.println("JSON from tranformer to JSON"+objectDataFromApiResponst);
-
+    private void buscarLibro(String bookName) {
+       //logica de busqueda de libro
+        System.out.println("Buscando..");
+        var json= GetAPI.obtenerJson(API_URL+ "?search="+bookName.replace(" ","+"));
+        var objectBookData = dataTransformer.getData(json, BookDTO.class);
+        Optional <BookData> SearchedBookDataObject = objectBookData.books().stream()
+                .filter(t->t.title().toUpperCase().contains(bookName.toUpperCase()))
+                .map(bookData -> {
+                    // Modifica el campo idiom para que solo contenga el primer idioma
+                    List<String> firstLanguageList = (bookData.idiom() != null && !bookData.idiom().isEmpty())
+                            ? List.of(bookData.idiom().get(0))  // Solo el primer idioma
+                            : List.of();
+                    return new BookData(
+                            bookData.title(),
+                            bookData.author(),
+                            firstLanguageList,
+                            bookData.cantidaDeDescargas()
+                    );
+                })
+                .findFirst();
+        if(SearchedBookDataObject.isPresent()) {
+            Book bookData = new Book( SearchedBookDataObject.get());
+            System.out.println(bookData);
+            try {
+                bookRepository.save(bookData);
+            } catch (DataIntegrityViolationException e) {
+                System.out.println(" El libro con este título ya fue registrado anteriormente .");
+            }
+        }else{
+            System.out.println("Libro no encontrado");
+        }
 
     }
+
+    private void showAllBooks() {
+        books = bookRepository.findAll();
+        books.forEach(System.out::println);
+    }
+
+    private void showAuthors() {
+        var authors= bookRepository.listAllAuthors();
+        authors.forEach(System.out::println);
+    }
+
+    private void listAuthorsByYear(Integer year) {
+        var syear = String.valueOf(year);
+        var objectList = bookRepository.findByAnios(syear);
+        if (objectList.isEmpty()){
+            System.out.println("No se encontro autores en ese año");
+        }else {
+            objectList.forEach(System.out::println);
+            System.out.println(objectList.size());
+        }
+
+    }
+
+    private void showBooksByIdiom(String searchidiom) {
+
+        try {
+            books = bookRepository.findByIdioma(searchidiom.trim());
+        } catch (Exception e) {
+            System.out.println("Ocurrió un error al buscar los libros: " + e.getMessage());
+            return;
+        }
+
+        if (books.isEmpty()){
+            System.out.println("No se encontro libros con ese idioma");
+        }else {
+            books.forEach(System.out::println);
+            System.out.println(books.size());
+        }
+
+    }
+
 
 }

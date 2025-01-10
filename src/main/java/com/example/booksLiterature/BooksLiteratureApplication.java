@@ -7,9 +7,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-
 import java.security.Principal;
-
 @SpringBootApplication
 public class BooksLiteratureApplication implements CommandLineRunner {
 
@@ -21,7 +19,7 @@ public class BooksLiteratureApplication implements CommandLineRunner {
 
 	@Override
 	public void run(String... args) throws Exception {
-		System.out.println("Runing...");
+		System.out.println("Running...");
 		Inicial inicial = new Inicial(bookRepository);
 		inicial.desplegarOpciones();
 	}
